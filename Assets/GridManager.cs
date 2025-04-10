@@ -9,7 +9,18 @@ public class IntListWrapper {
 
 public class Veriaition {
     public List<IntListWrapper> automata = new List<IntListWrapper>();
-}
+    public Hash128 hash = new Hash128();
+    public Vector2 size;
+
+    public Vector2 Size() {
+        if (automata == null || automata.Count == 0 || automata[0] == null) {
+            Debug.Log("fuck");
+            return Vector2.zero;
+        }
+        size = new Vector2(automata.Count, automata[0].innerList.Count);
+        return size;
+    }
+} 
 
 [System.Serializable]
 public class RuleSet {
@@ -22,7 +33,7 @@ public class Automata {
     public List<Veriaition> veriaitions = new List<Veriaition>();
     public List<int> offsets = new List<int>();
     public Color color = Color.yellow;
-    //git test
+
     public Automata(int mew){
         if ( mew == 0) {
             veriaitions.Add(new Veriaition());
@@ -41,7 +52,8 @@ public class Automata {
             veriaitions[0].automata[2].innerList.Add(1);
             veriaitions[0].automata[2].innerList.Add(0);
 
-            color = Color.yellow;
+            veriaitions[0].Size();
+            color = new Color(171 / 255f, 255 / 255f, 79 / 255f);//green
         }
         if (mew == 1) {
             veriaitions.Add(new Veriaition());
@@ -60,7 +72,8 @@ public class Automata {
             veriaitions[0].automata[2].innerList.Add(1);
             veriaitions[0].automata[2].innerList.Add(0);
 
-            color = Color.red;
+            veriaitions[0].Size();
+            color = new Color(4 / 255f, 119 / 255f, 59 / 255f);//was red now dark green
         }
 
         if (mew == 2) {
@@ -73,7 +86,8 @@ public class Automata {
             veriaitions[0].automata[1].innerList.Add(1);
             veriaitions[0].automata[1].innerList.Add(1);
 
-            color = Color.blue;
+            veriaitions[0].Size();
+            color = new Color(8 / 255f, 189 / 255f, 189 / 255f);// blue
         }
 
         if (mew == 3) {
@@ -86,10 +100,54 @@ public class Automata {
             veriaitions[0].automata[1].innerList.Add(1);
             veriaitions[0].automata[1].innerList.Add(0);
 
+            veriaitions[0].Size();
             color = Color.green;
         }
 
+        if (mew == 4) {
+            veriaitions.Add(new Veriaition());
+            veriaitions[0].automata.Add(new IntListWrapper());
+            veriaitions[0].automata[0].innerList.Add(1);
+            veriaitions[0].automata[0].innerList.Add(0);
+            veriaitions[0].automata[0].innerList.Add(0);
+
+            veriaitions[0].automata.Add(new IntListWrapper());
+            veriaitions[0].automata[1].innerList.Add(0);
+            veriaitions[0].automata[1].innerList.Add(1);
+            veriaitions[0].automata[1].innerList.Add(0);
+
+            veriaitions[0].automata.Add(new IntListWrapper());
+            veriaitions[0].automata[2].innerList.Add(0);
+            veriaitions[0].automata[2].innerList.Add(0);
+            veriaitions[0].automata[2].innerList.Add(1);
+
+            veriaitions[0].Size();
+            color = Color.green;
+        }
+
+        if (mew == 5) {
+            veriaitions.Add(new Veriaition());
+            veriaitions[0].automata.Add(new IntListWrapper());
+            veriaitions[0].automata[0].innerList.Add(0);
+            veriaitions[0].automata[0].innerList.Add(1);
+            veriaitions[0].automata[0].innerList.Add(0);
+
+            veriaitions[0].automata.Add(new IntListWrapper());
+            veriaitions[0].automata[1].innerList.Add(0);
+            veriaitions[0].automata[1].innerList.Add(1);
+            veriaitions[0].automata[1].innerList.Add(1);
+
+            veriaitions[0].automata.Add(new IntListWrapper());
+            veriaitions[0].automata[2].innerList.Add(0);
+            veriaitions[0].automata[2].innerList.Add(0);
+            veriaitions[0].automata[2].innerList.Add(0);
+
+            veriaitions[0].Size();
+            color = new Color(0xF7 / 255f, 0x55 / 255f, 0x90 / 255f);
+        }
+
         GenerateGliderVariants();
+        HashVeriaitions();
     }
     public void GenerateGliderVariants() {
         // Get the original glider pattern
@@ -99,10 +157,13 @@ public class Automata {
         for (int i = 0; i < 4; i++) // Four rotations (0°, 90°, 180°, 270°)
         {
             Veriaition rotated = RotatePattern(original, i);
+            rotated.Size();
             veriaitions.Add(rotated);
 
             Veriaition horizontalMirror = MirrorPattern(rotated, true);
+            horizontalMirror.Size();
             Veriaition verticalMirror = MirrorPattern(rotated, false);
+            verticalMirror.Size();
 
             veriaitions.Add(horizontalMirror);
             veriaitions.Add(verticalMirror);
@@ -159,6 +220,15 @@ public class Automata {
         return result;
     }
 
+    private void HashVeriaitions() {
+        for (int v = 0; v < veriaitions.Count; v++) {
+            for (int i = 0; i < veriaitions[v].automata.Count; i++) {
+                for (int j = 0; j < veriaitions[v].automata[i].innerList.Count; j++) {
+                    veriaitions[v].hash.Append(veriaitions[v].automata[i].innerList[j]);
+                }
+            }
+        }
+    }
 }
 
 public class GridManager : MonoBehaviour
@@ -175,6 +245,8 @@ public class GridManager : MonoBehaviour
     public bool mirrorX = true;
     public bool mirrorY = true;
     public bool color = true;
+    private bool backGround = true;
+    private bool flush = true;
     public bool thirdDemontion = false;
     public Color aliveColor = Color.black;
     public Color deadColor = Color.white;
@@ -204,6 +276,7 @@ public class GridManager : MonoBehaviour
 
     private int[,] grid;
     public List<Automata> wanted = new List<Automata>();
+    public List<Vector2> sizes = new List<Vector2>();
     private int[,] newGrid;
     private Texture2D gridTexture;
     private float timer = 0f;
@@ -218,6 +291,9 @@ public class GridManager : MonoBehaviour
         wanted.Add(new Automata(0));
         wanted.Add(new Automata(1));
         wanted.Add(new Automata(2));
+        //wanted.Add(new Automata(4));
+        wanted.Add(new Automata(5));
+        UpdateSizes();
         parentFor3d.transform.SetParent(rotationParent.transform);
         gameSlider.maxValue = ruleSet.Count-1;
     }
@@ -254,6 +330,9 @@ public class GridManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.N)) {
             SceneManager.LoadScene(0);
         }
+        if (Input.GetKeyDown(KeyCode.P)) {
+            ExportObj();
+        }
 
         RotateObject();
         //RotateObjectWithMouse();
@@ -265,14 +344,12 @@ public class GridManager : MonoBehaviour
         grid = new int[width, height];
         newGrid = new int[width, height];
     }
-
     void InitializeTexture()
     {
         gridTexture = new Texture2D(width, height);
         gridTexture.filterMode = FilterMode.Point;
-        textureRenderer.material.mainTexture = gridTexture;
+        textureRenderer.material.SetTexture("_Texture2D", gridTexture);
     }
-
     void SimulateStep()
     {
         for (int x = 0; x < width; x++)
@@ -287,7 +364,6 @@ public class GridManager : MonoBehaviour
         // Swap grids
         (grid, newGrid) = (newGrid, grid);
     }
-
     int ApplyRules(int currentState, int neighbors)
     {
         if (currentState == 1)
@@ -299,7 +375,6 @@ public class GridManager : MonoBehaviour
             return System.Array.Exists(ruleSet[game].birthRules, n => n == neighbors) ? 1 : 0;
         }
     }
-
     int CountNeighbors(int x, int y)
     {
         int count = 0;
@@ -330,7 +405,6 @@ public class GridManager : MonoBehaviour
 
         return count;
     }
-
     void UpdateTexture(){
         for (int x = 0; x < width; x++){
             for (int y = 0; y < height; y++){
@@ -341,7 +415,6 @@ public class GridManager : MonoBehaviour
             }
         }
     }
-
     void HandleInput() {
         if (Input.GetMouseButton(0)) {
             // Get the grid's transform position as the origin
@@ -392,12 +465,28 @@ public class GridManager : MonoBehaviour
         }
     }
     public void HighlightAutomata() {
-        for (int a = 0; a < wanted.Count; a++) {
-            for (int v = 0; v < wanted[a].veriaitions.Count; v++) {
+        HashSet<Hash128>[,] hashGrid = new HashSet<Hash128>[width, height];
+
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                hashGrid[x, y] = new HashSet<Hash128>();
+            }
+        }
+
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                foreach (Hash128 hash in HashAllSizes(y, x)) {
+                    hashGrid[x, y].Add(hash);
+                }
+            }
+        }
+
+        foreach (Automata au in wanted) {
+            foreach (Veriaition ve in au.veriaitions) {
                 for (int x = 0; x < width; x++) {
                     for (int y = 0; y < height; y++) {
-                        if (CheckAutomata(x, y, v, a)) {
-                            ColorAutomata(x, y, v, a);
+                        if (hashGrid[x, y].Contains(ve.hash)) { 
+                            ColorAutomata(y, x, ve, au); 
                         }
                     }
                 }
@@ -405,6 +494,24 @@ public class GridManager : MonoBehaviour
         }
     }
 
+    private List<Hash128> HashAllSizes(int x, int y) {
+        List<Hash128> hashes = new List<Hash128>();
+
+        foreach(Vector2 size in sizes) {
+            hashes.Add(HashAGrid(x, y, size));
+        }
+
+        return hashes;
+    }
+    private Hash128 HashAGrid(int x, int y, Vector2 size) {
+        Hash128 hash = new Hash128();
+        for (int i = 0; i < size.x; i++) {
+            for (int j = 0; j < size.y; j++) {
+                hash.Append(RGrid(i + x, j + y));
+            }
+        }
+        return hash;
+    }
     private void Draw(int value, int x, int y) {
         int changeCheck = 0;
         if(value == 0) {
@@ -463,7 +570,6 @@ public class GridManager : MonoBehaviour
             Render();
         }
     }
-
     private bool CheckAutomata(int x, int y, int veriaition, int a) {
         for (int i = 0; i < wanted[a].veriaitions[veriaition].automata.Count; i++) {
             for (int j = 0; j < wanted[a].veriaitions[veriaition].automata[i].innerList.Count; j++) {
@@ -475,18 +581,15 @@ public class GridManager : MonoBehaviour
         }
         return true;
     }
-
-    private void ColorAutomata(int x, int y, int veriaition, int a) {
-        for (int i = 0; i < wanted[a].veriaitions[veriaition].automata.Count; i++) {
-            for (int j = 0; j < wanted[a].veriaitions[veriaition].automata[i].innerList.Count; j++) {
-                // Swap i and j if needed
-                if (wanted[a].veriaitions[veriaition].automata[i].innerList[j] == 1) {
-                    gridTexture.SetPixel(x + j, y + i, wanted[a].color);
+    private void ColorAutomata(int x, int y, Veriaition veriaition, Automata automata) {
+        for (int i = 0; i < veriaition.size.x; i++) {
+            for (int j = 0; j < veriaition.size.y; j++) {
+                if (veriaition.automata[i].innerList[j] == 1) {
+                    gridTexture.SetPixel(x + i, y + j, automata.color);
                 }
             }
         }
     }
-
     private void MirrorAxis() {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -513,7 +616,6 @@ public class GridManager : MonoBehaviour
             }
         }
     }
-
     private void ChessBoard() {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -528,19 +630,34 @@ public class GridManager : MonoBehaviour
     public void ClearGrid()
     {
         InitializeGrid();
-        Render();
+        Flush();
+        if (backGround) {
+            ChessBoard();
+            MirrorAxis();
+        }
+        gridTexture.Apply();
     }
-
     private void Render() {
-        ChessBoard();
-        MirrorAxis();
+        if (flush) {
+            Flush();
+        }
+        if (backGround && flush) {
+            ChessBoard();
+            MirrorAxis();
+        }
         UpdateTexture();
         if (color) {
             HighlightAutomata();
         }
         gridTexture.Apply();
     }
-
+    private void Flush() {
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                gridTexture.SetPixel(x, y, deadColor);
+            }
+        }
+    }
     private bool ThirdDomention() {
         if (!thirdDemontion) {
             return false;
@@ -573,7 +690,6 @@ public class GridManager : MonoBehaviour
         }
         return true;
     }
-
     private void RotateObject() {
         float rotationSpeed = 200f;
 
@@ -602,7 +718,6 @@ public class GridManager : MonoBehaviour
             }
         }
     }
-
     private void RotateObjectWithMouse() {
         float rotationSpeed = 200f; // Adjust to control the sensitivity of the rotation
 
@@ -617,43 +732,42 @@ public class GridManager : MonoBehaviour
             rotationParent.transform.Rotate(Vector3.right * -mouseY * rotationSpeed * Time.deltaTime, Space.World);
         }
     }
-
     bool AreColorsEqual(Color a, Color b, float tolerance = 0.01f) {
         return Mathf.Abs(a.r - b.r) < tolerance &&
                Mathf.Abs(a.g - b.g) < tolerance &&
                Mathf.Abs(a.b - b.b) < tolerance &&
                Mathf.Abs(a.a - b.a) < tolerance;
     }
-
     public void XmirrorToggle() {
         mirrorX = !mirrorX;
         Render();
     }
-
     public void YmirrorToggle() { 
         mirrorY = !mirrorY;
         Render();
     }
-
     public void BazingaLToggle() {
         bazingaL = !bazingaL;
         Render();
     }
-
     public void BazingaRToggle() {
         bazingaR = !bazingaR;
         Render();
     }
-
     public void ColorToggle() {
         color = !color;
         Render();
     }
-
+    public void BackGroundToggle() {
+        backGround = !backGround;
+        Render();
+    }
+    public void FlushToggle() {
+        flush = !flush;
+    }
     public void ThirdDemontionToggle() {
         thirdDemontion = !thirdDemontion;
     }
-
     public void GridSizeChange() {
         width = (int)slider.value;
         height = (int)slider.value;
@@ -661,11 +775,18 @@ public class GridManager : MonoBehaviour
         InitializeTexture();
         Render();
     }
-
     public void GameChange() {
         game = (int)gameSlider.value;
     }
-
+    public void UpdateSizes() {
+        foreach(Automata au in wanted) {
+            foreach(Veriaition ve in au.veriaitions) {
+                if (!sizes.Contains(ve.size)) {
+                    sizes.Add(ve.size);
+                }
+            }
+        }
+    }
     private int RGrid(int x, int y) {
         if(x < width && y < height) {
             return grid[x, y];
@@ -677,5 +798,9 @@ public class GridManager : MonoBehaviour
         if (x < width && y < height) {
             grid[x, y] = value;
         }
+    }
+    private void ExportObj() {
+        GameObject[] children = OBJExporter.GetAllChildren(parentFor3d);
+        OBJExporter.Instance.ExportGameObjects(children);
     }
 }

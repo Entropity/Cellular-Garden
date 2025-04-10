@@ -3904,6 +3904,7 @@ GameObject:
   - component: {fileID: 1722966309}
   - component: {fileID: 1722966308}
   - component: {fileID: 1722966307}
+  - component: {fileID: 1722966312}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -4039,6 +4040,7 @@ MonoBehaviour:
     birthRules: 01000000
   - survivalRules: 0000000001000000
     birthRules: 01000000
+  sizes: []
   textureRenderer: {fileID: 1722966308}
 --- !u!4 &1722966311
 Transform:
@@ -4055,6 +4057,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1722966312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1722966306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dad801b4eb3653418e7bbb218ad65ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  exportPath: ExportedMesh.obj
+  useVertexColors: 0
+  combineSimilarCubes: 1
+  combineDistanceThreshold: 0.1
+  includeMaterials: 0
 --- !u!1 &1739127976
 GameObject:
   m_ObjectHideFlags: 0
