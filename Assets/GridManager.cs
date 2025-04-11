@@ -520,7 +520,7 @@ public class GridManager : MonoBehaviour
             changeCheck = 0;
         }
 
-        if (RGrid(x, y) == changeCheck) {
+        if (RGrid(x, y) == changeCheck || !flush) {
             int midX = width / 2;
             int midY = height / 2;
             int disX = midX - x;
@@ -797,6 +797,9 @@ public class GridManager : MonoBehaviour
     private void WGrid(int x, int y, int value) {
         if (x < width && y < height) {
             grid[x, y] = value;
+            if (!flush && value == 0) {
+                gridTexture.SetPixel(x, y, deadColor);
+            }
         }
     }
     private void ExportObj() {
