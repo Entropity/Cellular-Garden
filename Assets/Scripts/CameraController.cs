@@ -56,10 +56,10 @@ public class CameraController : MonoBehaviour {
 
     private void HandleZoom() {
         // Keyboard zoom
-        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus)) {
+        if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus)) {
             targetPPU = Mathf.Min(targetPPU + zoomStep, maxPPU);
         }
-        if (Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus)) {
+        if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus)) {
             targetPPU = Mathf.Max(targetPPU - zoomStep, minPPU);
         }
 
