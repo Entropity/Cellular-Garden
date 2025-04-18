@@ -35,6 +35,9 @@ public class Automata {
     public List<int> offsets = new List<int>();
     public Color color = Color.yellow;
 
+    public Automata() {
+
+    }
     public Automata(int mew){
         if ( mew == 0) {
             veriaitions.Add(new Veriaition());
@@ -221,7 +224,7 @@ public class Automata {
         return result;
     }
 
-    private void HashVeriaitions() {
+    public void HashVeriaitions() {
         for (int v = 0; v < veriaitions.Count; v++) {
             for (int i = 0; i < veriaitions[v].automata.Count; i++) {
                 for (int j = 0; j < veriaitions[v].automata[i].innerList.Count; j++) {
@@ -304,11 +307,12 @@ public class GridManager : MonoBehaviour {
         InitializeTexture();
         InitializeSecondLayerTexture();
         //wanted.Add(new Automata(3));
-        wanted.Add(new Automata(0));
-        wanted.Add(new Automata(1));
-        wanted.Add(new Automata(2));
+        
+        //wanted.Add(new Automata(0));
+        //wanted.Add(new Automata(1));
+        //wanted.Add(new Automata(2));
         //wanted.Add(new Automata(4));
-        wanted.Add(new Automata(5));
+        //wanted.Add(new Automata(5));
         UpdateSizes();
         parentFor3d.transform.SetParent(rotationParent.transform);
         gameSlider.maxValue = ruleSet.Count - 1;
@@ -569,11 +573,27 @@ public class GridManager : MonoBehaviour {
                     int minY = Mathf.Min(firstClick.y, y);
                     int maxY = Mathf.Max(firstClick.y, y);
 
-                    for (int i = minX + 1; i <= maxX - 1; i++) {
-                        for (int j = minY + 1; j <= maxY - 1; j++) {
-                            WGrid(i, j, 1);
+                    if(maxX-minX == maxY - minY) {
+                        Automata auto = new Automata();
+                        auto.veriaitions.Add(new Veriaition());
+                        int shit = 0;
+                        for (int i = minX + 1; i <= maxX - 1; i++) {
+                            auto.veriaitions[0].automata.Add(new IntListWrapper());
+                            for (int j = minY + 1; j <= maxY - 1; j++) {
+                                int cellValue = RGrid(i, j);
+                                auto.veriaitions[0].automata[shit].innerList.Add(cellValue);
+                                print(value);
+                            }
+                            shit++;
                         }
+                        auto.veriaitions[0].Size();
+                        auto.color = Random.ColorHSV();
+                        auto.GenerateGliderVariants();
+                        auto.HashVeriaitions();
+                        wanted.Add(auto);
+                        UpdateSizes();
                     }
+                    
                     secondClick = false;
                     FlushLayerTwo();
                     Render();
