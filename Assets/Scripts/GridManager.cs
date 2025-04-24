@@ -1,28 +1,62 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using TMPro;
 
-public class IntListWrapper {
-    public List<int> innerList = new List<int>();
+public class Slice {
+    public List<int> slice = new List<int>();
 }
 
-public class Veriaition {
-    public List<IntListWrapper> automata = new List<IntListWrapper>();
+public class Evolution {
+    public List<Slice> slices = new List<Slice>();
     public Hash128 hash = new Hash128();
     public Vector2 size;
 
     public Vector2 Size() {
-        if (automata == null || automata.Count == 0 || automata[0] == null) {
+        if (slices == null || slices.Count == 0 || slices[0] == null) {
             Debug.Log("fuck");
             return Vector2.zero;
         }
-        size = new Vector2(automata.Count, automata[0].innerList.Count);
+        size = new Vector2(slices.Count, slices[0].slice.Count);
         return size;
     }
-} 
+    public Sprite GenerateSprite(Color coloring) {
+        // Validate automata data
+        if (slices == null || slices.Count == 0 || slices[0].slice.Count == 0) {
+            Debug.LogWarning("Invalid automata data.");
+            return null;
+        }
 
+        // Get the size of the automata
+        int width = slices.Count;
+        int height = slices[0].slice.Count;
+
+        // Create a new texture
+        Texture2D texture = new Texture2D(width, height);
+
+        // Fill the texture with data from the automata
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                // Get the value from the innerList (assumes values are 0 or 1)
+                int value = slices[x].slice[y];
+                // Set the pixel color based on the value
+                Color color = value == 1 ? coloring : Color.white;
+                texture.SetPixel(x, y, color);
+            }
+        }
+
+        // Apply the texture changes
+        texture.Apply();
+
+        // Create and return a sprite from the texture
+        Sprite sprite = Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        return sprite;
+
+    }
+}
 [System.Serializable]
 public class RuleSet {
     public int[] survivalRules;  // Neighbor counts for survival
@@ -31,207 +65,226 @@ public class RuleSet {
 
 public class Automata {
     [SerializeField]
-    public List<Veriaition> veriaitions = new List<Veriaition>();
+    public List<Evolution> evolutions = new List<Evolution>();
     public List<int> offsets = new List<int>();
     public Color color = Color.yellow;
-
+    public int gold = 0;
     public Automata() {
 
     }
-    public Automata(int mew){
-        if ( mew == 0) {
-            veriaitions.Add(new Veriaition());
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[0].innerList.Add(0);
-            veriaitions[0].automata[0].innerList.Add(1);
-            veriaitions[0].automata[0].innerList.Add(0);
+    public Automata(int hardCodedAutomataIndex){
+        if ( hardCodedAutomataIndex == 0) {
+            evolutions.Add(new Evolution());
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[0].slice.Add(0);
+            evolutions[0].slices[0].slice.Add(1);
+            evolutions[0].slices[0].slice.Add(0);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[1].innerList.Add(0);
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(0);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[1].slice.Add(0);
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(0);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[2].innerList.Add(0);
-            veriaitions[0].automata[2].innerList.Add(1);
-            veriaitions[0].automata[2].innerList.Add(0);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[2].slice.Add(0);
+            evolutions[0].slices[2].slice.Add(1);
+            evolutions[0].slices[2].slice.Add(0);
 
-            veriaitions[0].Size();
+            evolutions[0].Size();
             color = new Color(171 / 255f, 255 / 255f, 79 / 255f);//green
+            gold = 3;
+            HashAutomata(evolutions[0]);
         }
-        if (mew == 1) {
-            veriaitions.Add(new Veriaition());
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[0].innerList.Add(0);
-            veriaitions[0].automata[0].innerList.Add(1);
-            veriaitions[0].automata[0].innerList.Add(0);
+        if (hardCodedAutomataIndex == 1) {
+            evolutions.Add(new Evolution());
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[0].slice.Add(0);
+            evolutions[0].slices[0].slice.Add(1);
+            evolutions[0].slices[0].slice.Add(0);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(1);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(1);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[2].innerList.Add(0);
-            veriaitions[0].automata[2].innerList.Add(1);
-            veriaitions[0].automata[2].innerList.Add(0);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[2].slice.Add(0);
+            evolutions[0].slices[2].slice.Add(1);
+            evolutions[0].slices[2].slice.Add(0);
 
-            veriaitions[0].Size();
+            evolutions[0].Size();
             color = new Color(4 / 255f, 119 / 255f, 59 / 255f);//was red now dark green
+            HashAutomata(evolutions[0]);
         }
 
-        if (mew == 2) {
-            veriaitions.Add(new Veriaition());
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[0].innerList.Add(1);
-            veriaitions[0].automata[0].innerList.Add(1);
+        if (hardCodedAutomataIndex == 2) {
+            evolutions.Add(new Evolution());
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[0].slice.Add(1);
+            evolutions[0].slices[0].slice.Add(1);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(1);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(1);
 
-            veriaitions[0].Size();
+            evolutions[0].Size();
             color = new Color(8 / 255f, 189 / 255f, 189 / 255f);// blue
+            HashAutomata(evolutions[0]);
         }
 
-        if (mew == 3) {
-            veriaitions.Add(new Veriaition());
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[0].innerList.Add(1);
-            veriaitions[0].automata[0].innerList.Add(1);
+        if (hardCodedAutomataIndex == 3) {
+            evolutions.Add(new Evolution());
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[0].slice.Add(1);
+            evolutions[0].slices[0].slice.Add(1);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(0);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(0);
 
-            veriaitions[0].Size();
+            evolutions[0].Size();
             color = Color.green;
+            HashAutomata(evolutions[0]);
         }
 
-        if (mew == 4) {
-            veriaitions.Add(new Veriaition());
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[0].innerList.Add(1);
-            veriaitions[0].automata[0].innerList.Add(0);
-            veriaitions[0].automata[0].innerList.Add(0);
+        if (hardCodedAutomataIndex == 4) {
+            evolutions.Add(new Evolution());
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[0].slice.Add(1);
+            evolutions[0].slices[0].slice.Add(0);
+            evolutions[0].slices[0].slice.Add(0);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[1].innerList.Add(0);
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(0);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[1].slice.Add(0);
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(0);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[2].innerList.Add(0);
-            veriaitions[0].automata[2].innerList.Add(0);
-            veriaitions[0].automata[2].innerList.Add(1);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[2].slice.Add(0);
+            evolutions[0].slices[2].slice.Add(0);
+            evolutions[0].slices[2].slice.Add(1);
 
-            veriaitions[0].Size();
+            evolutions[0].Size();
             color = Color.green;
+            HashAutomata(evolutions[0]);
         }
 
-        if (mew == 5) {
-            veriaitions.Add(new Veriaition());
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[0].innerList.Add(0);
-            veriaitions[0].automata[0].innerList.Add(1);
-            veriaitions[0].automata[0].innerList.Add(0);
+        if (hardCodedAutomataIndex == 5) {
+            evolutions.Add(new Evolution());
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[0].slice.Add(0);
+            evolutions[0].slices[0].slice.Add(1);
+            evolutions[0].slices[0].slice.Add(0);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[1].innerList.Add(0);
-            veriaitions[0].automata[1].innerList.Add(1);
-            veriaitions[0].automata[1].innerList.Add(1);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[1].slice.Add(0);
+            evolutions[0].slices[1].slice.Add(1);
+            evolutions[0].slices[1].slice.Add(1);
 
-            veriaitions[0].automata.Add(new IntListWrapper());
-            veriaitions[0].automata[2].innerList.Add(0);
-            veriaitions[0].automata[2].innerList.Add(0);
-            veriaitions[0].automata[2].innerList.Add(0);
+            evolutions[0].slices.Add(new Slice());
+            evolutions[0].slices[2].slice.Add(0);
+            evolutions[0].slices[2].slice.Add(0);
+            evolutions[0].slices[2].slice.Add(0);
 
-            veriaitions[0].Size();
+            evolutions[0].Size();
             color = new Color(0xF7 / 255f, 0x55 / 255f, 0x90 / 255f);
+            HashAutomata(evolutions[0]);
         }
 
-        GenerateGliderVariants();
-        HashVeriaitions();
+        GenerateVariants();
     }
-    public void GenerateGliderVariants() {
-        // Get the original glider pattern
-        Veriaition original = veriaitions[0];
+    public void GenerateVariants() {
+        Evolution original = evolutions[0];
 
-        // Create rotated and mirrored patterns
         for (int i = 0; i < 4; i++) // Four rotations (0°, 90°, 180°, 270°)
         {
-            Veriaition rotated = RotatePattern(original, i);
+            Evolution rotated = RotateAutomata(original, i);
             rotated.Size();
-            veriaitions.Add(rotated);
-
-            Veriaition horizontalMirror = MirrorPattern(rotated, true);
+            Evolution horizontalMirror = MirrorAutomata(rotated, true);
             horizontalMirror.Size();
-            Veriaition verticalMirror = MirrorPattern(rotated, false);
+            Evolution verticalMirror = MirrorAutomata(rotated, false);
             verticalMirror.Size();
 
-            veriaitions.Add(horizontalMirror);
-            veriaitions.Add(verticalMirror);
+            HashAutomata(rotated);
+            HashAutomata(horizontalMirror);
+            HashAutomata(verticalMirror);
+
+            if (!CheckHash(rotated)) {
+                evolutions.Add(rotated);
+            }
+            if (!CheckHash(horizontalMirror)) {
+                evolutions.Add(horizontalMirror);
+            }
+            if (!CheckHash(verticalMirror)) {
+                evolutions.Add(verticalMirror);
+            }
         }
     }
 
-    private Veriaition RotatePattern(Veriaition input, int rotation) {
-        Veriaition result = new Veriaition();
-        int rows = input.automata.Count;
-        int cols = input.automata[0].innerList.Count;
+    private Evolution RotateAutomata(Evolution input, int rotation) {
+        Evolution result = new Evolution();
+        int rows = input.slices.Count;
+        int cols = input.slices[0].slice.Count;
 
         for (int i = 0; i < cols; i++) {
-            IntListWrapper newRow = new IntListWrapper();
+            Slice newRow = new Slice();
 
             for (int j = 0; j < rows; j++) {
                 if (rotation == 1) // Rotate 90° clockwise
-                    newRow.innerList.Add(input.automata[rows - j - 1].innerList[i]);
+                    newRow.slice.Add(input.slices[rows - j - 1].slice[i]);
                 else if (rotation == 2) // Rotate 180°
-                    newRow.innerList.Add(input.automata[rows - i - 1].innerList[cols - j - 1]);
+                    newRow.slice.Add(input.slices[rows - i - 1].slice[cols - j - 1]);
                 else if (rotation == 3) // Rotate 270° clockwise
-                    newRow.innerList.Add(input.automata[j].innerList[cols - i - 1]);
+                    newRow.slice.Add(input.slices[j].slice[cols - i - 1]);
                 else // 0° (original)
-                    newRow.innerList.Add(input.automata[i].innerList[j]);
+                    newRow.slice.Add(input.slices[i].slice[j]);
             }
 
-            result.automata.Add(newRow);
+            result.slices.Add(newRow);
         }
 
         return result;
     }
 
-    private Veriaition MirrorPattern(Veriaition input, bool horizontal) {
-        Veriaition result = new Veriaition();
+    private Evolution MirrorAutomata(Evolution input, bool horizontal) {
+        Evolution result = new Evolution();
 
-        foreach (var row in input.automata) {
-            IntListWrapper newRow = new IntListWrapper();
+        foreach (var row in input.slices) {
+            Slice newRow = new Slice();
 
             if (horizontal) {
-                for (int i = row.innerList.Count - 1; i >= 0; i--) {
-                    newRow.innerList.Add(row.innerList[i]);
+                for (int i = row.slice.Count - 1; i >= 0; i--) {
+                    newRow.slice.Add(row.slice[i]);
                 }
             } else {
-                newRow.innerList.AddRange(row.innerList);
+                newRow.slice.AddRange(row.slice);
             }
 
-            result.automata.Add(newRow);
+            result.slices.Add(newRow);
         }
 
         if (!horizontal) // For vertical mirror, reverse the entire pattern's rows
         {
-            result.automata.Reverse();
+            result.slices.Reverse();
         }
 
         return result;
     }
 
-    public void HashVeriaitions() {
-        for (int v = 0; v < veriaitions.Count; v++) {
-            for (int i = 0; i < veriaitions[v].automata.Count; i++) {
-                for (int j = 0; j < veriaitions[v].automata[i].innerList.Count; j++) {
-                    veriaitions[v].hash.Append(veriaitions[v].automata[i].innerList[j]);
-                }
+    public void HashAutomata(Evolution eve) {
+        for (int i = 0; i < eve.slices.Count; i++) {
+            for (int j = 0; j < eve.slices[i].slice.Count; j++) {
+                eve.hash.Append(eve.slices[i].slice[j]);
             }
         }
+    }
+    public bool CheckHash(Evolution eve) {
+        foreach (Evolution eves in evolutions) {
+            if(eve.hash == eves.hash) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -240,10 +293,11 @@ public enum Tool {
 }
 
 public class GridManager : MonoBehaviour {
+    #region Grid Settings
     [Header("Grid Settings")]
     public int width = 50;
     public int height = 50;
-    public int game = 0;
+    public int rule = 0;
     public int z = 1;
     public float cellSize = 1f;
     public bool wrapEdges = true;
@@ -251,72 +305,116 @@ public class GridManager : MonoBehaviour {
     public bool bazingaR = true;
     public bool mirrorX = true;
     public bool mirrorY = true;
-    public bool color = true;
+    public bool coloring = true;
+
+    // Internal grid state
     private bool layer2Active = false;
     private bool secondClick = false;
-    private Vector2Int firstClick = new Vector2Int();
     private bool backGround = true;
     private bool flush = true;
-    public bool thirdDemontion = false;
+    public bool voxelRendering = false;
+    public bool highPriority = true;
+    private Vector2Int firstClick = new Vector2Int();
+    private Vector2Int penPos;
+    #endregion
+
+    #region Color Settings
+    [Header("Colors")]
     public Color aliveColor = Color.black;
     public Color deadColor = Color.white;
     public Color chesswhite;
     public Color chessBlack;
     public Color mirrorColor;
     public Color temp;
-    public Color pen;
-    private Vector2Int penPos;
-    public GameObject cube;
-    public GameObject parentFor3d;
-    public GameObject rotationParent;
+    public Color penShadow;
+    #endregion
 
+    #region Voxel & Visual Settings
+    [Header("Voxel & Visual Settings")]
+    public GameObject voxel;
+    public GameObject voxels;
+    public GameObject voxelsRotationAxis;
+
+    private Coroutine highlightCoroutine = null;
+    public float colorUpdateInterval = 1f; // Interval for low-priority updates
+
+    public Renderer textureRenderer;
+    public Material defaultVoxelMaterial;
+
+    public float rotationSpeed = 100f;
+    private Vector3 lastMousePosition;
+    #endregion
+
+    #region Tool & Input Settings
+    [Header("Tool & Input Settings")]
     private Tool activeTool = Tool.pen;
-
     public Slider slider;
     public Slider gameSlider;
+    #endregion
 
+    #region Game Settings
+    [Header("Game")]
+    public int gold = 0;
+    public TMP_Text goldText;
+    #endregion
+
+    #region Interaction Settings
     [Header("Interaction")]
     public bool drawEnabled = true;
     public int brushSize = 1;
     public bool eraseMode = false;
+    #endregion
 
+    #region Simulation Settings
     [Header("Simulation Settings")]
     [Range(0.001f, 0.01f)]
     public float updateInterval = 0.01f;
-    public bool simulate = true;
+    public bool simulate = false;
+    #endregion
 
+    #region Rules
     [Header("Rules")]
     public List<RuleSet> ruleSet = new List<RuleSet>();
+    #endregion
 
+    #region Grid Data & Textures
     private int[,] grid;
-    public List<Automata> wanted = new List<Automata>();
+    public List<Automata> coloredAutomatas = new List<Automata>();
     public List<Vector2> sizes = new List<Vector2>();
     private int[,] newGrid;
     private Texture2D gridTexture;
     private Texture2D layer2Texture;
     public GameObject layer2;
     private float timer = 0f;
+    #endregion
 
-    public Renderer textureRenderer;
-
+    #region Audio Settings
     public AudioSource audioSource;
     public AudioClip shutterSound;
+    #endregion
 
+    #region UI Settings
+    // UI Elements
+    public GameObject CardFab;
+    public RectTransform content; // Reference to ScrollView's Content
+    public List<GameObject> cards; // List of card objects
+    #endregion
     void Start() {
         InitializeGrid();
         InitializeTexture();
         InitializeSecondLayerTexture();
         //wanted.Add(new Automata(3));
         
-        //wanted.Add(new Automata(0));
-        //wanted.Add(new Automata(1));
-        //wanted.Add(new Automata(2));
-        //wanted.Add(new Automata(4));
-        //wanted.Add(new Automata(5));
+        coloredAutomatas.Add(new Automata(0));
+        coloredAutomatas.Add(new Automata(1));
+        coloredAutomatas.Add(new Automata(2));
+        coloredAutomatas.Add(new Automata(4));
+        coloredAutomatas.Add(new Automata(5));
         UpdateSizes();
-        parentFor3d.transform.SetParent(rotationParent.transform);
+        voxels.transform.SetParent(voxelsRotationAxis.transform);
         gameSlider.maxValue = ruleSet.Count - 1;
         Render();
+        MakeCards();
     }
 
     void Update() {
@@ -326,7 +424,7 @@ public class GridManager : MonoBehaviour {
                 timer = 0f;
                 SimulateStep();
                 Render();
-                ThirdDomention();
+                Voxelate();
             }
         }
 
@@ -335,12 +433,14 @@ public class GridManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.E)) {
             simulate = !simulate;
+            SetHighPriority(simulate);
         }
         if (Input.GetKeyDown(KeyCode.R)) {
             ClearGrid();
+            GoBroke();
         }
         if (Input.GetKeyDown(KeyCode.Z)) {
-            ThirdDomention();
+            Voxelate();
         }
         if (Input.GetKeyDown(KeyCode.N)) {
             SceneManager.LoadScene(0);
@@ -349,12 +449,28 @@ public class GridManager : MonoBehaviour {
             ExportObj();
         }
 
-        RotateObject();
-        //RotateObjectWithMouse();
+        //RotateObject();
+        RotateObjectWithMouse();
         HandleInput();
         SecondLayer();
     }
 
+    void MakeCards() {
+        foreach (Transform child in content) {
+            child.gameObject.SetActive(false); // Disable the child for reuse
+        }
+        cards = new List<GameObject>();
+        content.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, (coloredAutomatas.Count+1) * 60);
+        for (int i = 0; i < coloredAutomatas.Count; i++) {
+            cards.Add(Instantiate(CardFab));
+            cards[i].transform.SetParent(content);
+            RectTransform rectTransform = cards[i].GetComponent<RectTransform>();
+            rectTransform.anchoredPosition = new Vector2(0, (i) * -60 + content.GetComponent<RectTransform>().sizeDelta.y / 2 - 30);
+            Sprite sprite = coloredAutomatas[i].evolutions[0].GenerateSprite(coloredAutomatas[i].color);
+            cards[i].transform.GetChild(1).GetComponent<Image>().sprite = sprite;
+            cards[i].transform.GetChild(1).GetComponent<Image>().sprite.texture.filterMode = FilterMode.Point;
+        }
+    }
     void InitializeGrid() {
         grid = new int[width, height];
         newGrid = new int[width, height];
@@ -363,6 +479,20 @@ public class GridManager : MonoBehaviour {
         gridTexture = new Texture2D(width, height);
         gridTexture.filterMode = FilterMode.Point;
         textureRenderer.material.SetTexture("_Texture2D", gridTexture);
+    }
+    public Color CuteColorPicker() {
+        // Generate random RGB values with a preference for brighter, vibrant colors
+        float r = Random.Range(0.5f, 1f); // Higher minimum for brighter colors
+        float g = Random.Range(0.5f, 1f);
+        float b = Random.Range(0.5f, 1f);
+
+        // Optionally, add a slight pastel effect
+        float pastelFactor = 0.8f;
+        r = (r + pastelFactor) / 2;
+        g = (g + pastelFactor) / 2;
+        b = (b + pastelFactor) / 2;
+
+        return new Color(r, g, b, 1f); // Always fully opaque
     }
     void InitializeSecondLayerTexture() {
         layer2Texture = new Texture2D(width, height);
@@ -388,9 +518,9 @@ public class GridManager : MonoBehaviour {
     }
     int ApplyRules(int currentState, int neighbors) {
         if (currentState == 1) {
-            return System.Array.Exists(ruleSet[game].survivalRules, n => n == neighbors) ? 1 : 0;
+            return System.Array.Exists(ruleSet[rule].survivalRules, n => n == neighbors) ? 1 : 0;
         } else {
-            return System.Array.Exists(ruleSet[game].birthRules, n => n == neighbors) ? 1 : 0;
+            return System.Array.Exists(ruleSet[rule].birthRules, n => n == neighbors) ? 1 : 0;
         }
     }
     int CountNeighbors(int x, int y) {
@@ -417,7 +547,7 @@ public class GridManager : MonoBehaviour {
 
         return count;
     }
-    void UpdateTexture() {
+    void DrawAliveCells() {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 //Color aliveRandom = Random.ColorHSV();.
@@ -463,16 +593,15 @@ public class GridManager : MonoBehaviour {
     }
     private void SpaceB() {
         if (simulate) {
-            simulate = !simulate;
+            simulate = false;
         }
         SimulateStep();
-        Render();
+        Render(false);
+        SetHighPriority(false);
     }
     private void SecondLayer() {
-        if(activeTool == Tool.pen) {
-            ShowPenPos();
-        }
-        if(activeTool != Tool.selector) {
+        ShowPenPos();
+        if (activeTool != Tool.selector) {
             return;
         }
         if (EventSystem.current.IsPointerOverGameObject()) {
@@ -480,6 +609,10 @@ public class GridManager : MonoBehaviour {
         }
         if (Input.GetMouseButtonDown(0)) {
             HandleLayer2MouseClick(1);
+            layer2Texture.Apply();
+        }
+        if (Input.GetMouseButtonDown(1)) {
+            HandleLayer2MouseClick(0);
             layer2Texture.Apply();
         }
         if (secondClick) {
@@ -532,7 +665,6 @@ public class GridManager : MonoBehaviour {
         Vector3 gridOrigin = transform.position;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         Plane gridPlane = new Plane(Vector3.forward, gridOrigin);
-
         if (gridPlane.Raycast(ray, out float enter)) {
             Vector3 worldPosition = ray.GetPoint(enter);
             worldPosition = new Vector3(worldPosition.x * width, worldPosition.y * height, worldPosition.z);
@@ -540,10 +672,9 @@ public class GridManager : MonoBehaviour {
             int x = Mathf.FloorToInt((worldPosition.x - gridOrigin.x) / cellSize + width / 2);
             int y = Mathf.FloorToInt((worldPosition.y - gridOrigin.y) / cellSize + height / 2);
 
-
             if (x >= 0 && x < width && y >= 0 && y < height) {
-                if(penPos.x != x || penPos.y != y) {
-                    layer2Texture.SetPixel(x, y, pen);
+                if (penPos.x != x || penPos.y != y) {
+                    layer2Texture.SetPixel(x, y, penShadow);
                     penPos = new Vector2Int(x, y);
                     layer2Texture.Apply();
                 }
@@ -551,6 +682,15 @@ public class GridManager : MonoBehaviour {
         }
     }
     void HandleLayer2MouseClick(int value) {
+        if(value == 0) {
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    layer2Texture.SetPixel(x, y, new Color(0, 0, 0, 0));
+                }
+            }
+            secondClick = false;
+            return;
+        }
         Vector3 gridOrigin = transform.position;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         Plane gridPlane = new Plane(Vector3.forward, gridOrigin);
@@ -575,23 +715,24 @@ public class GridManager : MonoBehaviour {
 
                     if(maxX-minX == maxY - minY) {
                         Automata auto = new Automata();
-                        auto.veriaitions.Add(new Veriaition());
+                        auto.evolutions.Add(new Evolution());
                         int shit = 0;
                         for (int i = minX + 1; i <= maxX - 1; i++) {
-                            auto.veriaitions[0].automata.Add(new IntListWrapper());
+                            auto.evolutions[0].slices.Add(new Slice());
                             for (int j = minY + 1; j <= maxY - 1; j++) {
                                 int cellValue = RGrid(i, j);
-                                auto.veriaitions[0].automata[shit].innerList.Add(cellValue);
+                                auto.evolutions[0].slices[shit].slice.Add(cellValue);
                                 print(value);
                             }
                             shit++;
                         }
-                        auto.veriaitions[0].Size();
-                        auto.color = Random.ColorHSV();
-                        auto.GenerateGliderVariants();
-                        auto.HashVeriaitions();
-                        wanted.Add(auto);
+                        auto.evolutions[0].Size();
+                        auto.HashAutomata(auto.evolutions[0]);
+                        auto.color = CuteColorPicker();
+                        auto.GenerateVariants();
+                        coloredAutomatas.Add(auto);
                         UpdateSizes();
+                        MakeCards();
                     }
                     
                     secondClick = false;
@@ -625,11 +766,12 @@ public class GridManager : MonoBehaviour {
             }
         }
 
-        foreach (Automata au in wanted) {
-            foreach (Veriaition ve in au.veriaitions) {
+        foreach (Automata au in coloredAutomatas) {
+            foreach (Evolution ve in au.evolutions) {
                 for (int x = 0; x < width; x++) {
                     for (int y = 0; y < height; y++) {
-                        if (hashGrid[x, y].Contains(ve.hash)) { 
+                        if (hashGrid[x, y].Contains(ve.hash)) {
+                            GainGold(au);
                             ColorAutomata(y, x, ve, au); 
                         }
                     }
@@ -637,7 +779,10 @@ public class GridManager : MonoBehaviour {
             }
         }
     }
-
+    private void GainGold(Automata auto) {
+        gold += auto.gold;
+        goldText.text = "Gold: " + gold.ToString();
+    }
     private List<Hash128> HashAllSizes(int x, int y) {
         List<Hash128> hashes = new List<Hash128>();
 
@@ -711,24 +856,24 @@ public class GridManager : MonoBehaviour {
             } else if (!mirrorX && !mirrorY && !bazingaL && !bazingaR) {
                 WGrid(x, y, value);
             }
-            Render();
+            Render(true);
         }
     }
     private bool CheckAutomata(int x, int y, int veriaition, int a) {
-        for (int i = 0; i < wanted[a].veriaitions[veriaition].automata.Count; i++) {
-            for (int j = 0; j < wanted[a].veriaitions[veriaition].automata[i].innerList.Count; j++) {
+        for (int i = 0; i < coloredAutomatas[a].evolutions[veriaition].slices.Count; i++) {
+            for (int j = 0; j < coloredAutomatas[a].evolutions[veriaition].slices[i].slice.Count; j++) {
                 // Swap i and j if the glider appears rotated
-                if (RGrid(x + j, y + i) != wanted[a].veriaitions[veriaition].automata[i].innerList[j]) {
+                if (RGrid(x + j, y + i) != coloredAutomatas[a].evolutions[veriaition].slices[i].slice[j]) {
                     return false;
                 }
             }
         }
         return true;
     }
-    private void ColorAutomata(int x, int y, Veriaition veriaition, Automata automata) {
+    private void ColorAutomata(int x, int y, Evolution veriaition, Automata automata) {
         for (int i = 0; i < veriaition.size.x; i++) {
             for (int j = 0; j < veriaition.size.y; j++) {
-                if (veriaition.automata[i].innerList[j] == 1) {
+                if (veriaition.slices[i].slice[j] == 1) {
                     gridTexture.SetPixel(x + i, y + j, automata.color);
                 }
             }
@@ -789,11 +934,63 @@ public class GridManager : MonoBehaviour {
             ChessBoard();
             MirrorAxis();
         }
-        UpdateTexture();
-        if (color) {
-            HighlightAutomata();
+        DrawAliveCells();
+        if (coloring) {
+            if (highPriority) {
+                // If a low-priority coroutine is pending, cancel it
+                if (highlightCoroutine != null) {
+                    StopCoroutine(highlightCoroutine);
+                    highlightCoroutine = null;
+                }
+                HighlightAutomata();
+            } else {
+                // Only start one coroutine if it's not already running
+                if (highlightCoroutine == null) {
+                    print("new core");
+                    highlightCoroutine = StartCoroutine(DelayedHighlight());
+                }
+            }
         }
+
         gridTexture.Apply();
+    }
+    private void Render(bool pen) {
+        if (flush && !pen) {
+            Flush();
+        }
+        if (backGround && flush && !pen) {
+            ChessBoard();
+            MirrorAxis();
+        }
+        if (!pen) {
+            DrawAliveCells();
+        }
+        if (coloring) {
+            if (highPriority || !pen) {
+                // If a low-priority coroutine is pending, cancel it
+                if (highlightCoroutine != null) {
+                    StopCoroutine(highlightCoroutine);
+                    highlightCoroutine = null;
+                }
+                HighlightAutomata();
+            } else {
+                // Only start one coroutine if it's not already running
+                if (highlightCoroutine == null) {
+                    highlightCoroutine = StartCoroutine(DelayedHighlight());
+                }
+            }
+        }
+
+        gridTexture.Apply();
+    }
+    private IEnumerator DelayedHighlight() {
+        yield return new WaitForSeconds(colorUpdateInterval);
+        HighlightAutomata();
+        highlightCoroutine = null; // Reset reference so it can be re-started next time if needed
+        gridTexture.Apply();
+    }
+    public void SetHighPriority(bool isHighPriority) {
+        highPriority = isHighPriority;
     }
     private void Flush() {
         for (int x = 0; x < width; x++) {
@@ -802,78 +999,238 @@ public class GridManager : MonoBehaviour {
             }
         }
     }
-    private bool ThirdDomention() {
-        if (!thirdDemontion) {
+    private bool Voxelate() {
+        if (!voxelRendering) {
             return false;
         }
+
+        // First, build an array of valid voxels and store their color.
+        bool[,] validVoxels = new bool[width, height];
+        Color[,] voxelColors = new Color[width, height];
         bool change = false;
+
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 Color color = gridTexture.GetPixel(x, y);
-                if (color == chessBlack) {
-                    continue;
-                } else if (color == chesswhite) {
-                    continue;
-                } else if (color == deadColor) {
-                    continue;
-                } else if (AreColorsEqual(color, mirrorColor)) {
-                    continue;
+                // Skip if this pixel is one of the chosen “do not render” colors.
+                if (color == chessBlack || color == chesswhite || color == deadColor || AreColorsEqual(color, mirrorColor)) {
+                    validVoxels[x, y] = false;
                 } else {
-                    GameObject instance = Instantiate(cube);
-                    float scale = 1f / width;
-                    instance.transform.SetParent(parentFor3d.transform);
-                    instance.transform.localScale = new Vector3(scale, scale, scale);
-                    instance.transform.position = new Vector3((x - width / 2) * scale + 2, (y - height / 2) * scale, z * scale);
-                    instance.GetComponent<MeshRenderer>().material.color = color;
+                    validVoxels[x, y] = true;
+                    voxelColors[x, y] = color;
                     change = true;
                 }
             }
         }
+
+        // Determine the scale for this layer – we assume cubes should fill the width.
+        float scale = 1f / width;
+
+        // Prepare lists to build the mesh.
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Color> colors = new List<Color>();
+
+        // Loop through the layer and add cube (or partial cube) geometry for active voxels.
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (!validVoxels[x, y])
+                    continue;
+
+                Color col = voxelColors[x, y];
+                // Calculate the “center” position for this voxel.
+                Vector3 voxelPosition = new Vector3(
+                    (x - width / 2f) * scale + 2,
+                    (y - height / 2f) * scale,
+                    z * scale);
+
+                // Add geometry for this cube into our lists.
+                AddCubeMesh(voxelPosition, scale, col, validVoxels, x, y, vertices, triangles, colors);
+            }
+        }
+
+        // Only create a mesh if at least one voxel was added.
+        if (vertices.Count > 0) {
+            Mesh mesh = new Mesh();
+            mesh.vertices = vertices.ToArray();
+            mesh.triangles = triangles.ToArray();
+            mesh.colors = colors.ToArray();
+            mesh.RecalculateNormals();
+
+            // Create one GameObject for this layer
+            GameObject layerObj = new GameObject("VoxelLayer_" + z);
+            layerObj.transform.SetParent(voxels.transform, false);
+            // Attach mesh components
+            MeshFilter filter = layerObj.AddComponent<MeshFilter>();
+            MeshRenderer renderer = layerObj.AddComponent<MeshRenderer>();
+            filter.mesh = mesh;
+            renderer.material = defaultVoxelMaterial;
+        }
+
+        // Increment z if any voxel has been rendered.
         if (change) {
             z += 1;
         }
+
         return true;
+    }
+    private void AddCubeMesh(Vector3 pos, float scale, Color col, bool[,] validVoxels, int x, int y,
+                             List<Vector3> vertices, List<int> triangles, List<Color> colors) {
+        // The cube size is 'scale', so half of that:
+        float half = scale / 2f;
+
+        // Define the 8 corners of the cube.
+        // p0: left-bottom-front; p1: right-bottom-front; p2: right-top-front; p3: left-top-front;
+        // p4: left-bottom-back;  p5: right-bottom-back;  p6: right-top-back;  p7: left-top-back.
+        Vector3 p0 = pos + new Vector3(-half, -half, half);
+        Vector3 p1 = pos + new Vector3(half, -half, half);
+        Vector3 p2 = pos + new Vector3(half, half, half);
+        Vector3 p3 = pos + new Vector3(-half, half, half);
+        Vector3 p4 = pos + new Vector3(-half, -half, -half);
+        Vector3 p5 = pos + new Vector3(half, -half, -half);
+        Vector3 p6 = pos + new Vector3(half, half, -half);
+        Vector3 p7 = pos + new Vector3(-half, half, -half);
+
+        // Check adjacent voxels horizontally and vertically (in this 2D layer).
+        // If a neighbor exists then that face of the cube (shared with that neighbor) is hidden.
+        bool addLeft = (x == 0 || !validVoxels[x - 1, y]);
+        bool addRight = (x == validVoxels.GetLength(0) - 1 || !validVoxels[x + 1, y]);
+        bool addBottom = (y == 0 || !validVoxels[x, y - 1]);
+        bool addTop = (y == validVoxels.GetLength(1) - 1 || !validVoxels[x, y + 1]);
+
+        // For the depth (z), we assume that this method only builds one slice, so both front and back are drawn.
+        bool addFront = true;
+        bool addBack = true;
+
+        int startIndex = vertices.Count;
+
+        // Add Front face (p0, p1, p2, p3)
+        if (addFront) {
+            vertices.Add(p0); vertices.Add(p1); vertices.Add(p2); vertices.Add(p3);
+            colors.Add(col); colors.Add(col); colors.Add(col); colors.Add(col);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 1);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 3);
+            startIndex += 4;
+        }
+
+        // Add Back face (p5, p4, p7, p6)
+        if (addBack) {
+            vertices.Add(p5); vertices.Add(p4); vertices.Add(p7); vertices.Add(p6);
+            colors.Add(col); colors.Add(col); colors.Add(col); colors.Add(col);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 1);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 3);
+            startIndex += 4;
+        }
+
+        // Add Left face (p4, p0, p3, p7)
+        if (addLeft) {
+            vertices.Add(p4); vertices.Add(p0); vertices.Add(p3); vertices.Add(p7);
+            colors.Add(col); colors.Add(col); colors.Add(col); colors.Add(col);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 1);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 3);
+            startIndex += 4;
+        }
+
+        // Add Right face (p1, p5, p6, p2)
+        if (addRight) {
+            vertices.Add(p1); vertices.Add(p5); vertices.Add(p6); vertices.Add(p2);
+            colors.Add(col); colors.Add(col); colors.Add(col); colors.Add(col);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 1);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 3);
+            startIndex += 4;
+        }
+
+        // Add Top face (p3, p2, p6, p7)
+        if (addTop) {
+            vertices.Add(p3); vertices.Add(p2); vertices.Add(p6); vertices.Add(p7);
+            colors.Add(col); colors.Add(col); colors.Add(col); colors.Add(col);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 1);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 3);
+            startIndex += 4;
+        }
+
+        // Add Bottom face (p4, p5, p1, p0)
+        if (addBottom) {
+            vertices.Add(p4); vertices.Add(p5); vertices.Add(p1); vertices.Add(p0);
+            colors.Add(col); colors.Add(col); colors.Add(col); colors.Add(col);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 1);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 0);
+            triangles.Add(startIndex + 2);
+            triangles.Add(startIndex + 3);
+        }
     }
     private void RotateObject() {
         float rotationSpeed = 200f;
 
         if (Input.GetKey(KeyCode.LeftShift)) {
             if (Input.GetKey(KeyCode.J)) {
-                rotationParent.transform.rotation = Quaternion.Euler(0, 90, 0);
+                voxelsRotationAxis.transform.rotation = Quaternion.Euler(0, 90, 0);
             } else if (Input.GetKey(KeyCode.K)) {
-                rotationParent.transform.rotation = Quaternion.Euler(0, 180, 0);
+                voxelsRotationAxis.transform.rotation = Quaternion.Euler(0, 180, 0);
             } else if (Input.GetKey(KeyCode.L)) {
-                rotationParent.transform.rotation = Quaternion.Euler(0, -90, 0);
+                voxelsRotationAxis.transform.rotation = Quaternion.Euler(0, -90, 0);
             } else if (Input.GetKey(KeyCode.I)) {
-                rotationParent.transform.rotation = Quaternion.Euler(0, 0, 0);
+                voxelsRotationAxis.transform.rotation = Quaternion.Euler(0, 0, 0);
             }
         } else {
             if (Input.GetKey(KeyCode.J)) {
-                rotationParent.transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime); //Z-axis (counterclockwise)
+                voxelsRotationAxis.transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime); //Z-axis (counterclockwise)
             }
             if (Input.GetKey(KeyCode.K)) {
-                rotationParent.transform.Rotate(-Vector3.forward * rotationSpeed * Time.deltaTime); //Z-axis (clockwise)
+                voxelsRotationAxis.transform.Rotate(-Vector3.forward * rotationSpeed * Time.deltaTime); //Z-axis (clockwise)
             }
             if (Input.GetKey(KeyCode.L)) {
-                rotationParent.transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime); //Y-axis
+                voxelsRotationAxis.transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime); //Y-axis
             }
             if (Input.GetKey(KeyCode.I)) {
-                rotationParent.transform.Rotate(-Vector3.up * rotationSpeed * Time.deltaTime); //Y-axis (opposite direction)
+                voxelsRotationAxis.transform.Rotate(-Vector3.up * rotationSpeed * Time.deltaTime); //Y-axis (opposite direction)
             }
         }
     }
     private void RotateObjectWithMouse() {
-        float rotationSpeed = 200f; // Adjust to control the sensitivity of the rotation
+        // When the left mouse button is pressed down, record the mouse position.
+        if (Input.GetMouseButtonDown(0)) {
+            lastMousePosition = Input.mousePosition;
+        }
 
-        if (Input.GetMouseButton(0)) { // Detect left mouse button hold
-            float mouseX = Input.GetAxis("Mouse X"); // Horizontal mouse movement
-            float mouseY = Input.GetAxis("Mouse Y"); // Vertical mouse movement
+        // While the left mouse button is held down, compute rotation.
+        if (Input.GetMouseButton(0)) {
+            // Get the mouse's delta movement.
+            Vector3 delta = Input.mousePosition - lastMousePosition;
 
-            // Rotate around the Y-axis based on horizontal mouse movement
-            rotationParent.transform.Rotate(Vector3.up * mouseX * rotationSpeed * Time.deltaTime, Space.World);
+            // Horizontal movement rotates around the world Y axis.
+            float rotationY = -delta.x * rotationSpeed * Time.deltaTime;
+            // Vertical movement rotates around the object's X axis.
+            float rotationX = delta.y * rotationSpeed * Time.deltaTime;
 
-            // Rotate around the X-axis based on vertical mouse movement
-            rotationParent.transform.Rotate(Vector3.right * -mouseY * rotationSpeed * Time.deltaTime, Space.World);
+            // Rotate the object. Adjust the axis and space as needed.
+            voxelsRotationAxis.transform.Rotate(Vector3.up, rotationY, Space.World);
+            voxelsRotationAxis.transform.Rotate(Vector3.right, rotationX, Space.World);
+
+            // Update the last mouse position for the next frame.
+            lastMousePosition = Input.mousePosition;
         }
     }
     bool AreColorsEqual(Color a, Color b, float tolerance = 0.01f) {
@@ -899,7 +1256,7 @@ public class GridManager : MonoBehaviour {
         Render();
     }
     public void ColorToggle() {
-        color = !color;
+        coloring = !coloring;
         Render();
     }
     public void BackGroundToggle() {
@@ -910,7 +1267,7 @@ public class GridManager : MonoBehaviour {
         flush = !flush;
     }
     public void ThirdDemontionToggle() {
-        thirdDemontion = !thirdDemontion;
+        voxelRendering = !voxelRendering;
     }
     public void GridSizeChange() {
         width = (int)slider.value;
@@ -920,11 +1277,11 @@ public class GridManager : MonoBehaviour {
         Render();
     }
     public void GameChange() {
-        game = (int)gameSlider.value;
+        rule = (int)gameSlider.value;
     }
     public void UpdateSizes() {
-        foreach(Automata au in wanted) {
-            foreach(Veriaition ve in au.veriaitions) {
+        foreach(Automata au in coloredAutomatas) {
+            foreach(Evolution ve in au.evolutions) {
                 if (!sizes.Contains(ve.size)) {
                     sizes.Add(ve.size);
                 }
@@ -938,25 +1295,30 @@ public class GridManager : MonoBehaviour {
             return -1;
         }
     }
+    private void GoBroke() {
+        gold = 0;
+        goldText.text = "Gold: 0";
+    }
     private void WGrid(int x, int y, int value) {
         if (x < width && y < height) {
             grid[x, y] = value;
-            if (!flush && value == 0) {
+            if (value == 0) {
                 gridTexture.SetPixel(x, y, deadColor);
+            } else {
+                gridTexture.SetPixel(x, y, aliveColor);
             }
         }
+        //gridTexture.Apply();
     }
     private void ExportObj() {
-        GameObject[] children = OBJExporter.GetAllChildren(parentFor3d);
+        GameObject[] children = OBJExporter.GetAllChildren(voxels);
         OBJExporter.Instance.ExportGameObjects(children);
     }
-
     public void ShuterSound() {
         audioSource.pitch = Random.Range(0.95f, 1f);
         audioSource.PlayOneShot(shutterSound);
         SpaceB();
     }
-
     public void ChangeTool(int index) {
         activeTool = (Tool)index;
     }
