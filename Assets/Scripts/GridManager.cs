@@ -5,6 +5,10 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.IO;
+using System;
 
 public class Slice {
     public List<int> slice = new List<int>();
@@ -40,10 +44,29 @@ public class Evolution {
         // Fill the texture with data from the automata
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                // Get the value from the innerList (assumes values are 0 or 1)
+                // Get the value from the inner list (assumes values are 0 or 1)
                 int value = slices[x].slice[y];
-                // Set the pixel color based on the value
+
+                // Set the base pixel color
                 Color color = value == 1 ? coloring : Color.white;
+
+                // Example condition: Modify the color for "even" cells.
+                // Here "even" is defined as cells where (x+y) is even.
+                if ((x + y) % 2 == 0) {
+                    // To darken the color: multiply by a factor less than 1 (e.g., 0.9).
+                    float darkenFactor = 0.97f;
+                    color.r *= darkenFactor;
+                    color.g *= darkenFactor;
+                    color.b *= darkenFactor;
+
+                    // Alternatively, if you want the color to be lighter on even cells, use a factor > 1.
+                    // float lightenFactor = 1.1f;
+                    // color.r = Mathf.Min(color.r * lightenFactor, 1f);
+                    // color.g = Mathf.Min(color.g * lightenFactor, 1f);
+                    // color.b = Mathf.Min(color.b * lightenFactor, 1f);
+                }
+
+                // Apply the pixel color
                 texture.SetPixel(x, y, color);
             }
         }
@@ -68,6 +91,7 @@ public class Automata {
     public List<Evolution> evolutions = new List<Evolution>();
     public List<int> offsets = new List<int>();
     public Color color = Color.yellow;
+    public bool active = true;
     public int gold = 0;
     public Automata() {
 
@@ -92,7 +116,7 @@ public class Automata {
 
             evolutions[0].Size();
             color = new Color(171 / 255f, 255 / 255f, 79 / 255f);//green
-            gold = 3;
+            gold = 1;
             HashAutomata(evolutions[0]);
         }
         if (hardCodedAutomataIndex == 1) {
@@ -289,7 +313,10 @@ public class Automata {
 }
 
 public enum Tool {
-    pen, selector
+    pen, selector, shapes
+}
+public enum Shape {
+    circle, line//, triangle
 }
 
 public class GridManager : MonoBehaviour {
@@ -309,7 +336,7 @@ public class GridManager : MonoBehaviour {
 
     // Internal grid state
     private bool layer2Active = false;
-    private bool secondClick = false;
+    public bool secondClick = false;
     private bool backGround = true;
     private bool flush = true;
     public bool voxelRendering = false;
@@ -352,6 +379,12 @@ public class GridManager : MonoBehaviour {
     public Slider gameSlider;
     #endregion
 
+    #region Shapes
+    [Header("Shapes")]
+    private Shape activeShape = Shape.circle;
+    private bool shapeSymmetry = true;
+    #endregion
+
     #region Game Settings
     [Header("Game")]
     public int gold = 0;
@@ -367,7 +400,7 @@ public class GridManager : MonoBehaviour {
 
     #region Simulation Settings
     [Header("Simulation Settings")]
-    [Range(0.001f, 0.01f)]
+    [Range(0.001f, 1f)]
     public float updateInterval = 0.01f;
     public bool simulate = false;
     #endregion
@@ -379,6 +412,7 @@ public class GridManager : MonoBehaviour {
 
     #region Grid Data & Textures
     private int[,] grid;
+    private List<int[,]> timeLine = new List<int[,]>();
     public List<Automata> coloredAutomatas = new List<Automata>();
     public List<Vector2> sizes = new List<Vector2>();
     private int[,] newGrid;
@@ -448,7 +482,22 @@ public class GridManager : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.P)) {
             ExportObj();
         }
-
+        if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) {
+            if( Input.GetKeyDown(KeyCode.S)){
+                Debug.Log("Ctrl + S Pressed!");
+                SaveGrid();
+            }
+            else if (Input.GetKeyDown(KeyCode.Z)) {
+                Debug.Log("Ctrl + Z Pressed!");
+                LoadGrid();
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.I)) {
+            InvertGrid();
+        }
+        if (Input.GetKeyDown(KeyCode.K)) {
+            Discover();
+        }
         //RotateObject();
         RotateObjectWithMouse();
         HandleInput();
@@ -456,19 +505,35 @@ public class GridManager : MonoBehaviour {
     }
 
     void MakeCards() {
+        float newWidth = content.parent.parent.GetComponent<RectTransform>().sizeDelta.x;
+        float newHeight = newWidth - 180 + 60;
+
         foreach (Transform child in content) {
             child.gameObject.SetActive(false); // Disable the child for reuse
         }
         cards = new List<GameObject>();
-        content.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, (coloredAutomatas.Count+1) * 60);
+        content.GetComponent<RectTransform>().sizeDelta = new Vector2(content.GetComponent<RectTransform>().sizeDelta.x, (coloredAutomatas.Count+1) * newHeight);
         for (int i = 0; i < coloredAutomatas.Count; i++) {
+            int index = i; // Create a local copy of `i`
+
             cards.Add(Instantiate(CardFab));
             cards[i].transform.SetParent(content);
             RectTransform rectTransform = cards[i].GetComponent<RectTransform>();
-            rectTransform.anchoredPosition = new Vector2(0, (i) * -60 + content.GetComponent<RectTransform>().sizeDelta.y / 2 - 30);
+            rectTransform.anchoredPosition = new Vector2(0, (coloredAutomatas.Count -1 - i) * -newHeight + content.GetComponent<RectTransform>().sizeDelta.y / 2 - (newHeight/2));
+            rectTransform.sizeDelta = new Vector2(newWidth, newHeight);
+
             Sprite sprite = coloredAutomatas[i].evolutions[0].GenerateSprite(coloredAutomatas[i].color);
             cards[i].transform.GetChild(1).GetComponent<Image>().sprite = sprite;
             cards[i].transform.GetChild(1).GetComponent<Image>().sprite.texture.filterMode = FilterMode.Point;
+            cards[i].transform.GetChild(2).GetComponent<TMP_Text>().text = "1/" + coloredAutomatas[i].evolutions.Count.ToString();
+
+            cards[i].transform.GetChild(3).GetComponent<Button>().onClick.AddListener(() => MoveColoredAutmataLower(index));
+            cards[i].transform.GetChild(4).GetComponent<Button>().onClick.AddListener(() => MoveColoredAutmataHigher(index));
+            cards[i].transform.GetChild(5).GetComponent<Toggle>().isOn = coloredAutomatas[index].active;
+            cards[i].transform.GetChild(5).GetComponent<Toggle>().onValueChanged.AddListener((bool isOn) =>
+            {
+                ToggleAutomata(index);
+            });
         }
     }
     void InitializeGrid() {
@@ -480,19 +545,44 @@ public class GridManager : MonoBehaviour {
         gridTexture.filterMode = FilterMode.Point;
         textureRenderer.material.SetTexture("_Texture2D", gridTexture);
     }
-    public Color CuteColorPicker() {
-        // Generate random RGB values with a preference for brighter, vibrant colors
-        float r = Random.Range(0.5f, 1f); // Higher minimum for brighter colors
-        float g = Random.Range(0.5f, 1f);
-        float b = Random.Range(0.5f, 1f);
+    public void MoveColoredAutmataHigher(int index) {
+        // Ensure the object is not already at the beginning
+        if (index > 0) {
+            // Swap with the previous element
+            print(index);
+            var temp = coloredAutomatas[index];
+            coloredAutomatas[index] = coloredAutomatas[index - 1];
+            coloredAutomatas[index - 1] = temp;
+        }
+        MakeCards();
+        Render(false);
+    }
+    public void ToggleAutomata(int index) {
+        coloredAutomatas[index].active = !coloredAutomatas[index].active;
+        Render(false);
+    }
+    public void MoveColoredAutmataLower(int index) {
+        // Ensure the object is not already at the end
+        if (index < coloredAutomatas.Count - 1) {
+            // Swap with the next element
+            print(index);
+            var temp = coloredAutomatas[index];
+            coloredAutomatas[index] = coloredAutomatas[index + 1];
+            coloredAutomatas[index + 1] = temp;
+        }
+        MakeCards();
+        Render(false);
+    }
+    public static Color CuteColor() {
+        // Generate a random hue between 0 and 1.
+        float hue = UnityEngine.Random.value;
 
-        // Optionally, add a slight pastel effect
-        float pastelFactor = 0.8f;
-        r = (r + pastelFactor) / 2;
-        g = (g + pastelFactor) / 2;
-        b = (b + pastelFactor) / 2;
+        // Keep saturation and value high (0.8 to 1 for vivid colors).
+        float saturation = UnityEngine.Random.Range(0.8f, 1f);
+        float value = UnityEngine.Random.Range(0.8f, 1f);
 
-        return new Color(r, g, b, 1f); // Always fully opaque
+        // Convert HSV to RGB and return it.
+        return Color.HSVToRGB(hue, saturation, value);
     }
     void InitializeSecondLayerTexture() {
         layer2Texture = new Texture2D(width, height);
@@ -587,7 +677,7 @@ public class GridManager : MonoBehaviour {
             int y = Mathf.FloorToInt((worldPosition.y - gridOrigin.y) / cellSize + height / 2);
 
             if (x >= 0 && x < width && y >= 0 && y < height) {
-                Draw(value, x, y);
+                DrawSymmetry(value, x, y, true);
             }
         }
     }
@@ -601,7 +691,7 @@ public class GridManager : MonoBehaviour {
     }
     private void SecondLayer() {
         ShowPenPos();
-        if (activeTool != Tool.selector) {
+        if (activeTool == Tool.pen) {
             return;
         }
         if (EventSystem.current.IsPointerOverGameObject()) {
@@ -622,6 +712,18 @@ public class GridManager : MonoBehaviour {
                 }
             }
 
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+
+            int shapeCount = Enum.GetValues(typeof(Shape)).Length;
+
+            if (scroll > 0) {
+                activeShape++;
+            } else if (scroll < 0) {
+                activeShape--;
+            }
+
+            activeShape = (Shape)(((int)activeShape + shapeCount) % shapeCount);
+
             Vector3 gridOrigin = transform.position;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             Plane gridPlane = new Plane(Vector3.forward, gridOrigin);
@@ -639,21 +741,85 @@ public class GridManager : MonoBehaviour {
                     int minY = Mathf.Min(firstClick.y, y);
                     int maxY = Mathf.Max(firstClick.y, y);
 
-                    // Create a color array to hold pixel data
-                    Color[] colors = new Color[(maxX - minX + 1) * (maxY - minY + 1)];
+                    int width = maxX - minX;
+                    int height = maxY - minY;
 
-                    for (int j = minY, index = 0; j <= maxY; j++) {
-                        for (int i = minX; i <= maxX; i++, index++) {
-                            if (i == minX || i == maxX || j == minY || j == maxY) {
-                                colors[index] = new Color(0, 0, 0, 0.9f); // Border color
-                            } else {
-                                colors[index] = new Color(0, 1, 0, 0.5f); // Inner color
+                    if(activeTool == Tool.selector) {
+                        // Create a color array to hold pixel data
+                        Color[] colors = new Color[(maxX - minX + 1) * (maxY - minY + 1)];
+
+                        for (int j = minY, index = 0; j <= maxY; j++) {
+                            for (int i = minX; i <= maxX; i++, index++) {
+                                if (i == minX || i == maxX || j == minY || j == maxY) {
+                                    colors[index] = new Color(0, 0, 0, 0.9f); // Border color
+                                } else {
+                                    if (width == height) {
+                                        colors[index] = new Color(0, 1, 0, 0.5f); // Inner color
+                                    } else {
+                                        colors[index] = new Color(1, 0, 0, 0.5f); // Inner color
+                                    }
+
+                                }
                             }
                         }
+                        layer2Texture.SetPixels(minX, minY, maxX - minX + 1, maxY - minY + 1, colors);
+                    }
+                   
+                    if(activeTool == Tool.shapes) {
+                        if (activeShape == Shape.circle) {
+                            //circle
+                            int centerX = (minX + maxX) / 2;
+                            int centerY = (minY + maxY) / 2;
+                            int radius = Mathf.Max(Mathf.Abs(x - centerX), Mathf.Abs(y - centerY));
+
+                            for (int i = centerX - radius; i <= centerX + radius; i++) {
+                                for (int j = centerY - radius; j <= centerY + radius; j++) {
+                                    float distanceSquared = Mathf.Pow(i - centerX, 2) + Mathf.Pow(j - centerY, 2);
+
+                                    if (distanceSquared <= Mathf.Pow(radius, 2)) {
+                                        layer2Texture.SetPixel(i, j, new Color(1, 0, 0, 0.4f));
+                                    }
+                                }
+                            }
+
+                            // Calculate horizontal and vertical radii based on the second point.
+                            int radiusX = Mathf.Abs(x - centerX);
+                            int radiusY = Mathf.Abs(y - centerY);
+
+                            // It's wise to check that neither radius is zero.
+                            if (radiusX == 0 || radiusY == 0) {
+                                return;
+                            }
+
+                            for (int i = centerX - radiusX; i <= centerX + radiusX; i++) {
+                                for (int j = centerY - radiusY; j <= centerY + radiusY; j++) {
+                                    // Normalize the pixel's distance from the center in both dimensions.
+                                    float normalizedX = Mathf.Pow((i - centerX) / (float)radiusX, 2);
+                                    float normalizedY = Mathf.Pow((j - centerY) / (float)radiusY, 2);
+
+                                    // Check if the point is inside the ellipse.
+                                    if (normalizedX + normalizedY <= 1) {
+                                        if (shapeSymmetry) {
+                                            DrawLayer2Symmetry(i, j, new Color(0, 1, 0, 0.8f));
+                                        } else {
+                                            layer2Texture.SetPixel(i, j, new Color(0, 1, 0, 0.8f));
+                                        }
+                                        
+                                    }
+                                }
+                            }
+                        }
+                        // Apply the color array to the texture
+
+                        if (activeShape == Shape.line) {
+                            DrawLine(firstClick.x, firstClick.y, x, y, layer2Texture, Color.black);
+                        }
+
+                        //if (activeShape == Shape.triangle) {
+                            //DrawTriangle(firstClick.x, firstClick.y, x, y, layer2Texture, Color.blue);
+                        //}
                     }
 
-                    // Apply the color array to the texture
-                    layer2Texture.SetPixels(minX, minY, maxX - minX + 1, maxY - minY + 1, colors);
                     layer2Texture.Apply();
                 }
             }
@@ -713,32 +879,151 @@ public class GridManager : MonoBehaviour {
                     int minY = Mathf.Min(firstClick.y, y);
                     int maxY = Mathf.Max(firstClick.y, y);
 
-                    if(maxX-minX == maxY - minY) {
-                        Automata auto = new Automata();
-                        auto.evolutions.Add(new Evolution());
-                        int shit = 0;
-                        for (int i = minX + 1; i <= maxX - 1; i++) {
-                            auto.evolutions[0].slices.Add(new Slice());
-                            for (int j = minY + 1; j <= maxY - 1; j++) {
-                                int cellValue = RGrid(i, j);
-                                auto.evolutions[0].slices[shit].slice.Add(cellValue);
-                                print(value);
+                    if(activeTool == Tool.selector) {
+                        if (maxX - minX == maxY - minY) {
+                            Automata auto = new Automata();
+                            auto.evolutions.Add(new Evolution());
+                            int shit = 0;
+                            for (int i = minX + 1; i <= maxX - 1; i++) {
+                                auto.evolutions[0].slices.Add(new Slice());
+                                for (int j = minY + 1; j <= maxY - 1; j++) {
+                                    int cellValue = RGrid(i, j);
+                                    auto.evolutions[0].slices[shit].slice.Add(cellValue);
+                                    print(value);
+                                }
+                                shit++;
                             }
-                            shit++;
+                            auto.evolutions[0].Size();
+                            auto.HashAutomata(auto.evolutions[0]);
+                            auto.color = CuteColor();
+                            auto.GenerateVariants();
+                            coloredAutomatas.Add(auto);
+                            UpdateSizes();
+                            MakeCards();
                         }
-                        auto.evolutions[0].Size();
-                        auto.HashAutomata(auto.evolutions[0]);
-                        auto.color = CuteColorPicker();
-                        auto.GenerateVariants();
-                        coloredAutomatas.Add(auto);
-                        UpdateSizes();
-                        MakeCards();
+                    }
+
+                    if(activeTool == Tool.shapes) {
+                        if (activeShape == Shape.circle) {
+                            //circle
+                            int centerX = (minX + maxX) / 2;
+                            int centerY = (minY + maxY) / 2;
+                            int radius = Mathf.Max(Mathf.Abs(x - centerX), Mathf.Abs(y - centerY));
+
+                            for (int i = centerX - radius; i <= centerX + radius; i++) {
+                                for (int j = centerY - radius; j <= centerY + radius; j++) {
+                                    float distanceSquared = Mathf.Pow(i - centerX, 2) + Mathf.Pow(j - centerY, 2);
+
+                                    if (distanceSquared <= Mathf.Pow(radius, 2)) {
+                                        //layer2Texture.SetPixel(i, j, new Color(1, 0, 0, 0.6f));
+                                    }
+                                }
+                            }
+
+                            // Calculate horizontal and vertical radii based on the second point.
+                            int radiusX = Mathf.Abs(x - centerX);
+                            int radiusY = Mathf.Abs(y - centerY);
+
+                            // It's wise to check that neither radius is zero.
+                            if (radiusX == 0 || radiusY == 0) {
+                                return;
+                            }
+
+                            for (int i = centerX - radiusX; i <= centerX + radiusX; i++) {
+                                for (int j = centerY - radiusY; j <= centerY + radiusY; j++) {
+                                    // Normalize the pixel's distance from the center in both dimensions.
+                                    float normalizedX = Mathf.Pow((i - centerX) / (float)radiusX, 2);
+                                    float normalizedY = Mathf.Pow((j - centerY) / (float)radiusY, 2);
+
+                                    // Check if the point is inside the ellipse.
+                                    if (normalizedX + normalizedY <= 1) {
+                                        if (shapeSymmetry) {
+                                            DrawSymmetry(1, i, j, false);
+                                        } else {
+                                            WGrid(i, j, 1);
+                                        }                                        
+                                    }
+                                }
+                            }
+                        }
+
+                        if (activeShape == Shape.line) {
+                            DrawLine(firstClick.x, firstClick.y, x, y);
+                        }
+
+                        //if(activeShape == Shape.triangle) {
+                            //DrawTriangle(firstClick.x, firstClick.y, x, y);
+                        //}
                     }
                     
                     secondClick = false;
                     FlushLayerTwo();
-                    Render();
+                    Render(false);
                 }
+            }
+        }
+    }
+    void DrawLine(int x0, int y0, int x1, int y1, Texture2D texture, Color color) {
+        int dx = Mathf.Abs(x1 - x0);
+        int dy = Mathf.Abs(y1 - y0);
+
+        int sx = x0 < x1 ? 1 : -1;
+        int sy = y0 < y1 ? 1 : -1;
+
+        int err = dx - dy;
+
+        while (true) {
+            if (shapeSymmetry) {
+                DrawLayer2Symmetry(x0, y0, color);
+            } else {
+                texture.SetPixel(x0, y0, color);
+            }
+
+            if (x0 == x1 && y0 == y1)
+                break;
+
+            int e2 = 2 * err;
+
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
+    void DrawLine(int x0, int y0, int x1, int y1) {
+        int dx = Mathf.Abs(x1 - x0);
+        int dy = Mathf.Abs(y1 - y0);
+
+        int sx = x0 < x1 ? 1 : -1;
+        int sy = y0 < y1 ? 1 : -1;
+
+        int err = dx - dy;
+
+        while (true) {
+            if (shapeSymmetry) {
+                DrawSymmetry(1, x0, y0, false);
+            } else {
+                WGrid(x0, y0, 1);
+            }
+
+            if (x0 == x1 && y0 == y1)
+                break;
+
+            int e2 = 2 * err;
+
+            if (e2 > -dy) {
+                err -= dy;
+                x0 += sx;
+            }
+
+            if (e2 < dx) {
+                err += dx;
+                y0 += sy;
             }
         }
     }
@@ -760,7 +1045,7 @@ public class GridManager : MonoBehaviour {
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                foreach (Hash128 hash in HashAllSizes(y, x)) {
+                foreach (Hash128 hash in HashAllSizes(y, x)) { // ALSO HASHES THE NONE ACTIVE AUTOMATAS SO ITS SLOW AS FUCK MAKE IT RIGHT
                     hashGrid[x, y].Add(hash);
                 }
             }
@@ -768,6 +1053,9 @@ public class GridManager : MonoBehaviour {
 
         foreach (Automata au in coloredAutomatas) {
             foreach (Evolution ve in au.evolutions) {
+                if(au.active == false) {
+                    break;
+                }
                 for (int x = 0; x < width; x++) {
                     for (int y = 0; y < height; y++) {
                         if (hashGrid[x, y].Contains(ve.hash)) {
@@ -778,6 +1066,52 @@ public class GridManager : MonoBehaviour {
                 }
             }
         }
+    }
+    public void HighlightAutomataFastButNotWorking() {
+        // Allocate and initialize your grid in parallel.
+        var hashGrid = new HashSet<Hash128>[width, height];
+
+        // Parallel initialization of each cell.
+        Parallel.For(0, width, x =>
+        {
+            for (int y = 0; y < height; y++) {
+                hashGrid[x, y] = new HashSet<Hash128>();
+            }
+        });
+
+        // Populate the grid. Since each (x,y) cell is independent, using Parallel.For helps speed this up.
+        Parallel.For(0, width, x =>
+        {
+            for (int y = 0; y < height; y++) {
+                foreach (Hash128 hash in HashAllSizes(y, x)) {
+                    // No concurrency issue here since each thread writes to its own hashGrid[x, y]
+                    hashGrid[x, y].Add(hash);
+                }
+            }
+        });
+
+        // Process automata concurrently.
+        // Note: if GainGold and ColorAutomata change shared state,
+        // ensure that they are thread safe. For instance, you might use locks.
+        Parallel.ForEach(coloredAutomatas, automata =>
+        {
+            foreach (Evolution evolution in automata.evolutions) {
+                // Parallelize grid cell processing for each evolution.
+                Parallel.For(0, width, x =>
+                {
+                    for (int y = 0; y < height; y++) {
+                        if (hashGrid[x, y].Contains(evolution.hash)) {
+                            // If GainGold (or ColorAutomata) modify automata's internal data,
+                            // consider locking. Replace 'automataLock' with an appropriate lock object.
+                            lock (automata) {
+                                GainGold(automata);
+                            }
+                            ColorAutomata(y, x, evolution, automata);
+                        }
+                    }
+                });
+            }
+        });
     }
     private void GainGold(Automata auto) {
         gold += auto.gold;
@@ -801,7 +1135,7 @@ public class GridManager : MonoBehaviour {
         }
         return hash;
     }
-    private void Draw(int value, int x, int y) {
+    private void DrawSymmetry(int value, int x, int y, bool render) {
         int changeCheck = 0;
         if(value == 0) {
             changeCheck = 1;
@@ -856,7 +1190,57 @@ public class GridManager : MonoBehaviour {
             } else if (!mirrorX && !mirrorY && !bazingaL && !bazingaR) {
                 WGrid(x, y, value);
             }
-            Render(true);
+            if (render) {
+                Render(false);
+            }
+        }
+    }
+    private void DrawLayer2Symmetry(int x, int y, Color color) {
+        int midX = width / 2;
+        int midY = height / 2;
+        int disX = midX - x;
+        int disY = midY - y;
+
+        if (mirrorX) {
+            layer2Texture.SetPixel(midX - disX, midY + disY, color);
+            layer2Texture.SetPixel(midX - disX, midY - disY, color);
+
+            if ((bazingaL && bazingaR)) {
+                layer2Texture.SetPixel(midX + disX, midY - disY, color);
+            }
+        }
+        if (mirrorY) {
+            layer2Texture.SetPixel(midX + disX, midY - disY, color);
+            layer2Texture.SetPixel(midX - disX, midY - disY, color);
+
+            if ((bazingaL && bazingaR)) {
+                layer2Texture.SetPixel(midX - disX, midY + disY, color);
+            }
+        }
+        if (bazingaR) {
+            layer2Texture.SetPixel(midY - disY, midX - disX, color);
+            layer2Texture.SetPixel(x, y, color);
+
+            if ((mirrorX && mirrorY)) {
+                layer2Texture.SetPixel(midY + disY, midX + disX, color);
+            }
+        }
+        if (bazingaL) {
+            layer2Texture.SetPixel(midY + disY, midX + disX, color);
+            layer2Texture.SetPixel(x, y, color);
+
+            if ((mirrorX && mirrorY)) {
+                layer2Texture.SetPixel(midY - disY, midX - disX, color);
+            }
+        }
+        if ((bazingaR && bazingaL) && (mirrorX && mirrorY)) {
+            layer2Texture.SetPixel(midY + disY, midX - disX, color);
+            layer2Texture.SetPixel(midY - disY, midX + disX, color);
+        }
+        if ((bazingaR && bazingaL) || (mirrorX && mirrorY)) {
+            layer2Texture.SetPixel(midX + disX, midY + disY, color);
+        } else if (!mirrorX && !mirrorY && !bazingaL && !bazingaR) {
+            layer2Texture.SetPixel(x, y, color);
         }
     }
     private bool CheckAutomata(int x, int y, int veriaition, int a) {
@@ -1040,7 +1424,7 @@ public class GridManager : MonoBehaviour {
                 Color col = voxelColors[x, y];
                 // Calculate the “center” position for this voxel.
                 Vector3 voxelPosition = new Vector3(
-                    (x - width / 2f) * scale + 2,
+                    (x - width / 2f) * scale,
                     (y - height / 2f) * scale,
                     z * scale);
 
@@ -1209,27 +1593,33 @@ public class GridManager : MonoBehaviour {
             }
         }
     }
+
     private void RotateObjectWithMouse() {
-        // When the left mouse button is pressed down, record the mouse position.
+        if (!voxelRendering)
+            return;
+
+        // When the drag starts, record the initial mouse position.
         if (Input.GetMouseButtonDown(0)) {
             lastMousePosition = Input.mousePosition;
         }
 
-        // While the left mouse button is held down, compute rotation.
         if (Input.GetMouseButton(0)) {
-            // Get the mouse's delta movement.
+            // Find the mouse delta since the last frame.
             Vector3 delta = Input.mousePosition - lastMousePosition;
 
-            // Horizontal movement rotates around the world Y axis.
+            // Calculate rotation amounts.
             float rotationY = -delta.x * rotationSpeed * Time.deltaTime;
-            // Vertical movement rotates around the object's X axis.
             float rotationX = delta.y * rotationSpeed * Time.deltaTime;
 
-            // Rotate the object. Adjust the axis and space as needed.
-            voxelsRotationAxis.transform.Rotate(Vector3.up, rotationY, Space.World);
-            voxelsRotationAxis.transform.Rotate(Vector3.right, rotationX, Space.World);
+            // Create quaternion rotations
+            Quaternion rotationDeltaY = Quaternion.AngleAxis(rotationY, Vector3.up);
+            Quaternion rotationDeltaX = Quaternion.AngleAxis(rotationX, Vector3.right);
 
-            // Update the last mouse position for the next frame.
+            // Apply rotations using quaternion multiplication
+            voxelsRotationAxis.transform.rotation = rotationDeltaY * voxelsRotationAxis.transform.rotation;
+            voxelsRotationAxis.transform.rotation = voxelsRotationAxis.transform.rotation * rotationDeltaX;
+
+            // Update the last mouse position.
             lastMousePosition = Input.mousePosition;
         }
     }
@@ -1238,6 +1628,9 @@ public class GridManager : MonoBehaviour {
                Mathf.Abs(a.g - b.g) < tolerance &&
                Mathf.Abs(a.b - b.b) < tolerance &&
                Mathf.Abs(a.a - b.a) < tolerance;
+    }
+    public void ShapeSymmetryToggle() {
+        shapeSymmetry = !shapeSymmetry;
     }
     public void XmirrorToggle() {
         mirrorX = !mirrorX;
@@ -1270,11 +1663,18 @@ public class GridManager : MonoBehaviour {
         voxelRendering = !voxelRendering;
     }
     public void GridSizeChange() {
-        width = (int)slider.value;
-        height = (int)slider.value;
+        width = NearestEven((int)slider.value);
+        height = NearestEven((int)slider.value);
         InitializeGrid();
         InitializeTexture();
+        InitializeSecondLayerTexture();
         Render();
+    }
+    private int NearestEven(int num) {
+        if(num % 2 == 0) {
+            return num;
+        }
+        return num + 1;
     }
     public void GameChange() {
         rule = (int)gameSlider.value;
@@ -1289,7 +1689,7 @@ public class GridManager : MonoBehaviour {
         }
     }
     private int RGrid(int x, int y) {
-        if(x < width && y < height) {
+        if(0 < x && x < width && 0 < y && y < height) {
             return grid[x, y];
         }else {
             return -1;
@@ -1300,7 +1700,7 @@ public class GridManager : MonoBehaviour {
         goldText.text = "Gold: 0";
     }
     private void WGrid(int x, int y, int value) {
-        if (x < width && y < height) {
+        if (0 < x && x < width && 0 < y && y < height) {
             grid[x, y] = value;
             if (value == 0) {
                 gridTexture.SetPixel(x, y, deadColor);
@@ -1315,11 +1715,132 @@ public class GridManager : MonoBehaviour {
         OBJExporter.Instance.ExportGameObjects(children);
     }
     public void ShuterSound() {
-        audioSource.pitch = Random.Range(0.95f, 1f);
+        audioSource.pitch = UnityEngine.Random.Range(0.95f, 1f);
         audioSource.PlayOneShot(shutterSound);
         SpaceB();
     }
     public void ChangeTool(int index) {
         activeTool = (Tool)index;
+    }
+    public void RandomizeHighLightColors() {
+        foreach(Automata automata in coloredAutomatas) {
+            automata.color = CuteColor();
+            MakeCards();
+            Render();
+        }
+    }
+    public void ScreenShot() {
+        if (backGround) {
+            backGround = false;
+            Render(false);
+            SaveTextureToPNG(gridTexture);
+            backGround = true;
+            Render(false);
+        } else {
+            SaveTextureToPNG(gridTexture);
+        }
+    }
+    public static void SaveTextureToPNG(Texture2D texture) {
+        if (texture == null) {
+            Debug.LogError("Texture is null!");
+            return;
+        }
+
+        // Convert texture to PNG
+        Texture2D upscaledTexture = UpscaleTexture(texture, 4);
+        byte[] pngData = upscaledTexture.EncodeToPNG();
+        if (pngData == null) {
+            Debug.LogError("Failed to encode texture to PNG!");
+            return;
+        }
+
+        // Generate filename with current time and date to seconds
+        string fileName = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".png";
+        string directoryPath = Directory.GetParent(Application.dataPath).FullName + "/ScreenShots";
+
+        string filePath = Path.Combine(directoryPath, fileName);
+
+        // Ensure directory exists
+        if (!Directory.Exists(directoryPath)) {
+            Directory.CreateDirectory(directoryPath);
+        }
+
+        // Write PNG file
+        File.WriteAllBytes(filePath, pngData);
+        Debug.Log($"Texture saved to: {filePath}");
+    }
+    private static Texture2D UpscaleTexture(Texture2D original, int scaleFactor) {
+        int newWidth = original.width * scaleFactor;
+        int newHeight = original.height * scaleFactor;
+        Texture2D newTexture = new Texture2D(newWidth, newHeight, original.format, false);
+
+        for (int x = 0; x < newWidth; x++) {
+            for (int y = 0; y < newHeight; y++) {
+                // Find the nearest pixel in the original texture
+                Color pixelColor = original.GetPixel(x / scaleFactor, y / scaleFactor);
+                newTexture.SetPixel(x, y, pixelColor);
+            }
+        }
+
+        newTexture.Apply();
+        return newTexture;
+    }
+    private void SaveGrid() {
+        int[,] gridCopy = new int[grid.GetLength(0), grid.GetLength(1)];
+
+        for (int i = 0; i < grid.GetLength(0); i++) {
+            for (int j = 0; j < grid.GetLength(1); j++) {
+                gridCopy[i, j] = grid[i, j];
+            }
+        }
+
+        timeLine.Add(gridCopy);
+    }
+    private void LoadGrid() {
+        int[,] sourceGrid = timeLine[timeLine.Count - 1];
+
+        grid = new int[sourceGrid.GetLength(0), sourceGrid.GetLength(1)];
+
+        for (int i = 0; i < sourceGrid.GetLength(0); i++) {
+            for (int j = 0; j < sourceGrid.GetLength(1); j++) {
+                grid[i, j] = sourceGrid[i, j];
+            }
+        }
+
+        //timeLine.RemoveAt(timeLine.Count - 1);
+        Render(false);
+    }
+    private void InvertGrid() {
+        for (int i = 0; i < grid.GetLength(0); i++) {
+            for (int j = 0; j < grid.GetLength(1); j++) {
+                if (grid[i, j] == 1) {
+                    grid[i, j] = 0;
+                } else {
+                    grid[i, j] = 1;
+                }
+            }
+        }
+        Render(false);
+    }
+    private void RandomizeGrid() {
+        for (int i = 0; i < grid.GetLength(0); i++) {
+            for (int j = 0; j < grid.GetLength(1); j++) {
+                int value = UnityEngine.Random.Range(0, 2);
+                grid[i, j] = value;
+            }
+        }
+        Render(false);
+    }
+    private void Discover() {
+        RandomRule();
+        RandomizeGrid();
+    }
+    private void RandomRule() {
+        ruleSet[0].birthRules = new int[1];
+        ruleSet[0].birthRules[0] = UnityEngine.Random.Range(0, 10);
+
+        ruleSet[0].survivalRules = new int[2];
+        ruleSet[0].survivalRules[0] = UnityEngine.Random.Range(0, 10);
+        ruleSet[0].survivalRules[1] = UnityEngine.Random.Range(0, 10);
     }
 }

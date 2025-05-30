@@ -18,6 +18,7 @@ public class CameraController : MonoBehaviour {
     [SerializeField] private float mouseZoomSensitivity = 0.5f;
 
     private PixelPerfectCamera pixelPerfectCamera;
+    public GridManager gridManager;
     private Vector2 movementInput;
     private Vector2 currentVelocity;
     private int targetPPU;
@@ -71,6 +72,10 @@ public class CameraController : MonoBehaviour {
     }
 
     private void HandleMouseZoom() {
+        if (gridManager.secondClick) {
+            return;
+        }
+
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0) {
             // Adjust zoom step based on sensitivity
